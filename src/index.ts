@@ -1,1 +1,1 @@
-export * from './lib/ct007';
+export * from './lib/main';
