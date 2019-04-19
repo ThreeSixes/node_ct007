@@ -32,15 +32,20 @@ export class CT007Poller {
     'N': 1111
   };
 
+  // Track what the detector's state is. It'll start in init.
+  private detectorState = "init";
+
   constructor(private config: ICT007Config = defaultConfig) {
   }
 
   public async init() {
     noble.on('stateChange', state => {
       if (state === 'poweredOn') {
+        this.setDetectorState('scanning');
         console.log('Scanning for "' + this.config.name + '"...');
         noble.startScanning([this.config.radCountServiceId]);
       } else {
+        this.setDetectorState('waitingOnBTLE');
         noble.stopScanning();
       }
     });
@@ -48,16 +53,25 @@ export class CT007Poller {
 
   public async scan() {
     noble.on('discover', peripheral => {
+      let foundPeriphrial = false;
       // connect to the first peripheral that is scanned
-      noble.stopScanning();
+      // noble.stopScanning();
+
       const name = peripheral.advertisement.localName;
 
       // TODO: If no name or address is specified we should try to find a device offering the Rad_Count service and just connect.
 
       // Does this device have the name we're interested in?
       if (name === this.config.name) {
+        foundPeriphrial = true;
         console.log(`Connecting to '${name}': ${peripheral.id}`);
         this.connectAndSetUp(peripheral);
+      }
+
+      // If we found the periphrial we're interested in...
+      if (foundPeriphrial) {
+        this.setDetectorState('discovered');
+        noble.stopScanning();
       }
     });
   }
@@ -66,10 +80,16 @@ export class CT007Poller {
     console.log('cleaning up');
   }
 
+  // We use this to allow the user to check the detector's state.
+  public async getDetectorState() {
+    return this.detectorState;
+  }
+
   // Connect to our detector and set it up.
   private connectAndSetUp(peripheral: any) {
     peripheral.connect((error: Error) => {
       console.log('Connected to', peripheral.id);
+      this.setDetectorState('connected');
 
       // specify the services and characteristics to discover
       const serviceUUIDs = [this.config.radCountServiceId];
@@ -83,7 +103,17 @@ export class CT007Poller {
       );
     });
 
-    peripheral.on('disconnect', () => console.log('Disconnected.'));
+    peripheral.on('disconnect', () => {
+      this.setDetectorState('disconnected');
+      console.log('Disconnected.');
+    });
+  }
+
+  private setDetectorState(state: string) {
+    // Set our global tracker. Maybe we don't need this.
+    this.detectorState = state
+
+    // Create an event here? We can use this to send signals about the detector's state to clients.
   }
 
   private onServicesAndCharacteristicsDiscovered(error: Error, services: any, characteristics: any) {
@@ -104,8 +134,10 @@ export class CT007Poller {
     // tslint:disable-next-line:variable-name
     radCtCharacteristic.subscribe((_error: Error) => {
       if (_error) {
+        this.setDetectorState('error');
         console.error('Error subscribing to Rad_Count');
       } else {
+        this.setDetectorState('readingCounts');
         console.log('Subscribed for Rad_Count notifications');
       }
     });
