@@ -21,22 +21,21 @@ export const defaultConfig: ICT007Config = {
   name: 'CT-F-54',
   radCountCharacteristicId: btleServiceIds.radCountCharacteristicId,
   radCountServiceId: btleServiceIds.radCountServiceId,
-  scanForever: true
+  scanForever: true,
 };
 
 export class CT007Poller {
   // Provide some useful constants for people's libraries.
   public static readonly RadCountUpdateHz = 5;
   public static readonly DoseDefaultConversionFactors = {
-    'F': 163,
-    'N': 1111
+    F: 163,
+    N: 1111,
   };
 
   // Track what the detector's state is. It'll start in init.
-  private detectorState = "init";
+  private detectorState = 'init';
 
-  constructor(private config: ICT007Config = defaultConfig) {
-  }
+  constructor(private config: ICT007Config = defaultConfig) {}
 
   public async init() {
     noble.on('stateChange', state => {
@@ -111,7 +110,7 @@ export class CT007Poller {
 
   private setDetectorState(state: string) {
     // Set our global tracker. Maybe we don't need this.
-    this.detectorState = state
+    this.detectorState = state;
 
     // Create an event here? We can use this to send signals about the detector's state to clients.
   }
@@ -119,9 +118,7 @@ export class CT007Poller {
   private onServicesAndCharacteristicsDiscovered(error: Error, services: any, characteristics: any) {
     console.log('Discovered services and characteristics');
     const radCtCharacteristic = characteristics[0];
-    const radCtParser = new Parser()
-      .endianess("little")
-      .int32le("count");
+    const radCtParser = new Parser().endianess('little').int32le('count');
 
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
