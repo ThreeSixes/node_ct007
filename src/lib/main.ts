@@ -3,6 +3,7 @@
 import { Parser } from 'binary-parser';
 import * as noble from 'noble';
 
+// We use these to track which services and chracteristics we're interested in using.
 const btleServiceIds = {
   radCountCharacteristicId: 'f100ffd104514100b100000000000000',
   radCountServiceId: 'f100ffd004514100b100000000000000',
@@ -24,6 +25,13 @@ export const defaultConfig: ICT007Config = {
 };
 
 export class CT007Poller {
+  // Provide some useful constants for people's libraries.
+  public static readonly RadCountUpdateHz = 5;
+  public static readonly DoseDefaultConversionFactors = {
+    'F': 163,
+    'N': 1111
+  };
+
   constructor(private config: ICT007Config = defaultConfig) {
   }
 
@@ -44,6 +52,8 @@ export class CT007Poller {
       noble.stopScanning();
       const name = peripheral.advertisement.localName;
 
+      // TODO: If no name or address is specified we should try to find a device offering the Rad_Count service and just connect.
+
       // Does this device have the name we're interested in?
       if (name === this.config.name) {
         console.log(`Connecting to '${name}': ${peripheral.id}`);
@@ -56,6 +66,7 @@ export class CT007Poller {
     console.log('cleaning up');
   }
 
+  // Connect to our detector and set it up.
   private connectAndSetUp(peripheral: any) {
     peripheral.connect((error: Error) => {
       console.log('Connected to', peripheral.id);
@@ -64,6 +75,7 @@ export class CT007Poller {
       const serviceUUIDs = [this.config.radCountServiceId];
       const characteristicUUIDs = [this.config.radCountCharacteristicId];
 
+      // Look for service and characteristic IDs we want.
       peripheral.discoverSomeServicesAndCharacteristics(
         serviceUUIDs,
         characteristicUUIDs,
@@ -81,7 +93,7 @@ export class CT007Poller {
       .endianess("little")
       .int32le("count");
 
-    // data callback receives notifications
+    // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
       const buf = Buffer.from(data);
       const counts = radCtParser.parse(buf).count;
