@@ -10,8 +10,8 @@
   "devDependencies": {
     "@types/jest": "23.3.x",
     "@types/noble": "0.0.39",
-    "jest": "24.0.x",
-    "prettier": "1.16.x",
+    "jest": "^24.0.0",
+    "prettier": "^1.16.4",
     "ts-jest": "23.10.x",
     "ts-node": "8.0.x",
     "tslint": "5.12.x",
@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf node_modules",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
     "postversion": "git push && git push --tags",
