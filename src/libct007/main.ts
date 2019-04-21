@@ -11,13 +11,14 @@ const btleServiceIds = {
 
 export interface ICT007Config {
   address?: string | null;
-  name: string | null;
-  scanForever: boolean;
+  name?: string | null;
   radCountServiceId: string;
   radCountCharacteristicId: string;
+  scanForever?: boolean;
 }
 
 export const defaultConfig: ICT007Config = {
+  address: null,
   name: null,
   radCountCharacteristicId: btleServiceIds.radCountCharacteristicId,
   radCountServiceId: btleServiceIds.radCountServiceId,
