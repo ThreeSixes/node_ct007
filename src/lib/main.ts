@@ -18,7 +18,7 @@ export interface ICT007Config {
 }
 
 export const defaultConfig: ICT007Config = {
-  name: 'CT-F-54',
+  name: null,
   radCountCharacteristicId: btleServiceIds.radCountCharacteristicId,
   radCountServiceId: btleServiceIds.radCountServiceId,
   scanForever: true,
@@ -34,6 +34,8 @@ export class CT007Poller {
 
   // Track what the detector's state is. It'll start in init.
   private detectorState = 'init';
+  private myName = "";
+  private myModel = {"full": "unkown", "short": "unkown"};
 
   constructor(private config: ICT007Config = defaultConfig) {}
 
@@ -43,6 +45,7 @@ export class CT007Poller {
         this.setDetectorState('scanning');
         console.log('Scanning for "' + this.config.name + '"...');
         noble.startScanning([this.config.radCountServiceId]);
+        this.scan();
       } else {
         this.setDetectorState('waitingOnBTLE');
         noble.stopScanning();
@@ -52,25 +55,31 @@ export class CT007Poller {
 
   public async scan() {
     noble.on('discover', peripheral => {
-      let foundPeriphrial = false;
-      // connect to the first peripheral that is scanned
-      // noble.stopScanning();
+      let connectToPeriphrial = false;
+      this.myName = peripheral.advertisement.localName;
 
-      const name = peripheral.advertisement.localName;
+      // If we're searching for both a name and address...
+      if (this.config.name && this.config.address) {
+        connectToPeriphrial = (peripheral.id === this.config.address) &&
+          (this.myName === this.config.name);
+      } else {
+        // Does either the address or name match?
+        connectToPeriphrial = (peripheral.id === this.config.address) ||
+          (this.myName === this.config.name);
 
-      // TODO: If no name or address is specified we should try to find a device offering the Rad_Count service and just connect.
-
-      // Does this device have the name we're interested in?
-      if (name === this.config.name) {
-        foundPeriphrial = true;
-        console.log(`Connecting to '${name}': ${peripheral.id}`);
-        this.connectAndSetUp(peripheral);
+        // If we aren't looking for a specific name or address
+        // just grab the first device we find since it has the Rad_Count service.
+        if (!this.config.name && !this.config.address) {
+          connectToPeriphrial = true;
+        }
       }
 
-      // If we found the periphrial we're interested in...
-      if (foundPeriphrial) {
-        this.setDetectorState('discovered');
-        noble.stopScanning();
+      // If we selected this device connect to it.
+      if (connectToPeriphrial) {
+          noble.stopScanning();
+          this.setDetectorState('discovered');
+          console.log(`Connecting to '${this.myName}': ${peripheral.id}`);
+          this.connectAndSetUp(peripheral);
       }
     });
   }
@@ -84,8 +93,14 @@ export class CT007Poller {
     return this.detectorState;
   }
 
+  // Give our device's model.
+  private async getModelFromInfo(info: string) {
+    return
+  }
+
   // Connect to our detector and set it up.
   private connectAndSetUp(peripheral: any) {
+    // Figure out what model we are.
     peripheral.connect((error: Error) => {
       console.log('Connected to', peripheral.id);
       this.setDetectorState('connected');
@@ -103,16 +118,25 @@ export class CT007Poller {
     });
 
     peripheral.on('disconnect', () => {
+      // Reset some of our basic device info.
       this.setDetectorState('disconnected');
+      this.myModel = {"full": "unkown", "short": "unkown"};
+      this.myName = "";
       console.log('Disconnected.');
+
+      // If we want to reconnected when the detector shows back up...
+      if (this.config.scanForever) {
+        this.scan();
+      }
     });
   }
 
   private setDetectorState(state: string) {
     // Set our global tracker. Maybe we don't need this.
+    console.log(state);
     this.detectorState = state;
 
-    // Create an event here? We can use this to send signals about the detector's state to clients.
+    // TODO: Create an event here? We can use this to send signals about the detector's state to clients.
   }
 
   private onServicesAndCharacteristicsDiscovered(error: Error, services: any, characteristics: any) {
@@ -122,19 +146,19 @@ export class CT007Poller {
 
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
-      const buf = Buffer.from(data);
-      const counts = radCtParser.parse(buf).count;
+      const counts = radCtParser.parse(Buffer.from(data)).count;
       console.log('Count: ' + counts);
     });
 
     // subscribe to be notified whenever the peripheral update the characteristic
+    // TODO: Figure out scoping issue here.
     // tslint:disable-next-line:variable-name
     radCtCharacteristic.subscribe((_error: Error) => {
       if (_error) {
-        this.setDetectorState('error');
+        //this.setDetectorState('error');
         console.error('Error subscribing to Rad_Count');
       } else {
-        this.setDetectorState('readingCounts');
+        //this.setDetectorState('readingCounts');
         console.log('Subscribed for Rad_Count notifications');
       }
     });
