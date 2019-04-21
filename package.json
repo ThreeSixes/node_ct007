@@ -1,11 +1,11 @@
 {
   "name": "CT007",
-  "version": "1.0.0",
-  "description": "CT007",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "version": "0.0.1",
+  "description": "CT007 radiation detector wrapper",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "lib/**/*"
+    "dist/**/*"
   ],
   "devDependencies": {
     "@types/jest": "23.3.x",
@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rm -rf node_modules",
+    "clean": "rm -rf node_modules dist",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
     "postversion": "git push && git push --tags",
@@ -32,11 +32,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rwaterman/ts-lib-starter.git"
+    "url": "git+https://github.com/threesixes/node_ct007.git"
   },
   "keywords": [
-    "TypeScript",
-    "Starter"
+    "CT007"
   ],
   "author": "Josh Lucy, Rick Waterman",
   "license": "MIT",
