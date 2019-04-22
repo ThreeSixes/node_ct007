@@ -21,6 +21,7 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf node_modules dist",
+    "demo": "node dist/ratemeter.js",
     "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\"",
     "lint": "tslint -p tsconfig.json",
     "postversion": "git push && git push --tags",
