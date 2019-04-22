@@ -1,50 +1,92 @@
 // tslint:disable:no-console
-
 import { Parser } from 'binary-parser';
 import * as noble from 'noble';
+import { SimpleEventDispatcher } from "strongly-typed-events";
 
 // We use these to track which services and chracteristics we're interested in using.
 const btleServiceIds = {
+  batteryCharacteristicId: '00002a1900001000800000805f9b34fb',
+  batteryServiceId: '0000180f00001000800000805f9b34fb',
+  informationCharacteristicId: '',
+  informationServiceId: '',
   radCountCharacteristicId: 'f100ffd104514100b100000000000000',
   radCountServiceId: 'f100ffd004514100b100000000000000',
 };
 
 export interface ICT007Config {
   address?: string | null;
+  batteryServiceCharacteristicId: string;
+  batteryServiceId: string;
+  informationCharacteristicId: string;
+  informationServiceId: string;
   name?: string | null;
   radCountServiceId: string;
   radCountCharacteristicId: string;
-  scanForever?: boolean;
+  scanForever: boolean;
 }
 
 export const defaultConfig: ICT007Config = {
   address: null,
+  batteryServiceCharacteristicId: btleServiceIds.batteryCharacteristicId,
+  batteryServiceId: btleServiceIds.batteryServiceId,
+  informationCharacteristicId: btleServiceIds.informationCharacteristicId,
+  informationServiceId: btleServiceIds.batteryServiceId,
   name: null,
   radCountCharacteristicId: btleServiceIds.radCountCharacteristicId,
   radCountServiceId: btleServiceIds.radCountServiceId,
   scanForever: true,
 };
 
-export class CT007Poller {
-  // Provide some useful constants for people's libraries.
-  public static readonly RadCountUpdateHz = 5;
-  public static readonly DoseDefaultConversionFactors = {
-    F: 163,
-    N: 1111,
-  };
+// Export constants that might be useful for applications.
+export const RadCountUpdateHz = 5;
+export const DefaultDoseConversionFactors = {
+  F: 163,
+  N: 1111,
+};
 
-  // Track what the detector's state is. It'll start in init.
+export class CT007Poller {
+  // Set up events.
+  private radCountEvent = new SimpleEventDispatcher<number>();
+  private stateChangeEvent = new SimpleEventDispatcher<string>();
+
+  // Private variables we want to use...
+  private radCtParser = new Parser().endianess('little').int32le('count');
   private detectorState = 'init';
   private myName = "";
+  private myAddress = "";
   private myModel = {"full": "unkown", "short": "unkown"};
 
-  constructor(private config: ICT007Config = defaultConfig) {}
+  constructor(private config: ICT007Config = defaultConfig) {
+    // Make sure we format the address for noble.
+    if (config.address) {
+      config.address = config.address.replace(/[:\-\.]/g, '');
+    }
+  }
 
+  // Expose the periphrial's properites.
+  public get name() {
+    return this.myName;
+  }
+
+  public get address() {
+    return this.myAddress;
+  }
+
+  // Use this to expose the rad_count event.
+  public get onRadCount() {
+    return this.radCountEvent.asEvent();
+  }
+
+  // Use this to expose device state change events.
+  public get onStateChange() {
+    return this.stateChangeEvent.asEvent();
+  }
+
+  // Class init.
   public async init() {
     noble.on('stateChange', state => {
       if (state === 'poweredOn') {
         this.setDetectorState('scanning');
-        console.log('Scanning for "' + this.config.name + '"...');
         noble.startScanning([this.config.radCountServiceId]);
         this.scan();
       } else {
@@ -54,10 +96,13 @@ export class CT007Poller {
     });
   }
 
+  // When try to discover devices.
   public async scan() {
+    // When we've discovered a device...
     noble.on('discover', peripheral => {
       let connectToPeriphrial = false;
       this.myName = peripheral.advertisement.localName;
+      this.myAddress = peripheral.id;
 
       // If we're searching for both a name and address...
       if (this.config.name && this.config.address) {
@@ -79,12 +124,12 @@ export class CT007Poller {
       if (connectToPeriphrial) {
           noble.stopScanning();
           this.setDetectorState('discovered');
-          console.log(`Connecting to '${this.myName}': ${peripheral.id}`);
           this.connectAndSetUp(peripheral);
       }
     });
   }
 
+  // Any activities we want to do at the end of operation
   public async cleanup() {
     console.log('cleaning up');
   }
@@ -103,7 +148,6 @@ export class CT007Poller {
   private connectAndSetUp(peripheral: any) {
     // Figure out what model we are.
     peripheral.connect((error: Error) => {
-      console.log('Connected to', peripheral.id);
       this.setDetectorState('connected');
 
       // specify the services and characteristics to discover
@@ -118,12 +162,12 @@ export class CT007Poller {
       );
     });
 
+    // When a device disconnects this is what we want to do.
     peripheral.on('disconnect', () => {
       // Reset some of our basic device info.
       this.setDetectorState('disconnected');
       this.myModel = {"full": "unkown", "short": "unkown"};
       this.myName = "";
-      console.log('Disconnected.');
 
       // If we want to reconnected when the detector shows back up...
       if (this.config.scanForever) {
@@ -134,33 +178,28 @@ export class CT007Poller {
 
   private setDetectorState(state: string) {
     // Set our global tracker. Maybe we don't need this.
-    console.log(state);
+    this.stateChangeEvent.dispatch(state);
     this.detectorState = state;
-
-    // TODO: Create an event here? We can use this to send signals about the detector's state to clients.
   }
 
-  private onServicesAndCharacteristicsDiscovered(error: Error, services: any, characteristics: any) {
-    console.log('Discovered services and characteristics');
+  private onServicesAndCharacteristicsDiscovered = (error: Error, services: any, characteristics: any) => {
     const radCtCharacteristic = characteristics[0];
-    const radCtParser = new Parser().endianess('little').int32le('count');
+    this.setDetectorState('subscribingToCounts');
 
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
+      const radCtParser = new Parser().endianess('little').int32le('count');
       const counts = radCtParser.parse(Buffer.from(data)).count;
-      console.log('Count: ' + counts);
+      this.radCountEvent.dispatch(counts);
     });
 
     // subscribe to be notified whenever the peripheral update the characteristic
-    // TODO: Figure out scoping issue here.
     // tslint:disable-next-line:variable-name
     radCtCharacteristic.subscribe((_error: Error) => {
       if (_error) {
-        //this.setDetectorState('error');
-        console.error('Error subscribing to Rad_Count');
+        this.setDetectorState('subscribeError');
       } else {
-        //this.setDetectorState('readingCounts');
-        console.log('Subscribed for Rad_Count notifications');
+        this.setDetectorState('readingCounts');
       }
     });
   }
