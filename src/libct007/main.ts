@@ -57,7 +57,7 @@ export class CT007Poller {
   private myModel = {"full": "unkown", "short": "unkown"};
 
   constructor(private config: ICT007Config = defaultConfig) {
-    // Make sure we format the address for noble.
+    // Make sure we format the address for noble: a 6-byte hex string.
     if (config.address) {
       config.address = config.address.replace(/[:\-\.]/g, '');
     }
