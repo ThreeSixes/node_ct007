@@ -92,6 +92,8 @@ export class Ratemeter {
         }
 
         console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1));
+
+        this.counter.getBatteryLevel();
       }
     }
     setTimeout(this.onSecond, 1000);

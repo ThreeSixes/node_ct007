@@ -147,11 +147,15 @@ export class CT007Poller {
 
   // TODO: Make this just. fucking. return. the. battery. level. as. a. fucking. number.
   public async getBatteryLevel() {
-    this.battCharacteristic.read(function(error: Error, data: string) {
+    let battData = {};
+
+    this.battCharacteristic.read((error: Error, data: string) => {
       const battParser = new Parser().endianess('little').int32le('battPct');
-      // This won't work, but FFS get the value out of here. Fuck. I hate anoymous functions.
-      return battParser.parse(Buffer.from(data)).battPct;
+      battData = {battPct: battParser.parse(Buffer.from(data)).battPct};
+      console.log(battData);
     });
+
+    console.log(battData);
   }
 
   // Give our device's model.
