@@ -57,6 +57,7 @@ export class CT007Poller {
   private myModel = {"full": "unkown", "short": "unkown"};
   private battCharacteristic: any;
   private batteryPct: number = 0;
+  private leLongParser = new Parser().endianess('little').int32le('number');
 
   constructor(private config: ICT007Config = defaultConfig) {
     // Make sure we format the address for noble: a 6-byte hex string.
@@ -145,17 +146,25 @@ export class CT007Poller {
     return this.detectorState;
   }
 
-  // TODO: Make this just. fucking. return. the. battery. level. as. a. fucking. number.
   public async getBatteryLevel() {
-    let battData = {};
+    let battPct: number = -1;
+    // Make sure we're connected otherwise the promise may never resolve.
+    // TODO: Figure out why logic evaluating the detector's state never evaluates true.
+    if (true) {
+      // TODO: Figure out how to type this return which should be a number.
+      let battResult = await new Promise((resolve, reject) => {
+        this.battCharacteristic.read((error: Error, data: string) => {
+          if (error) {
+            reject(error);
+          }
 
-    this.battCharacteristic.read((error: Error, data: string) => {
-      const battParser = new Parser().endianess('little').int32le('battPct');
-      battData = {battPct: battParser.parse(Buffer.from(data)).battPct};
-      console.log(battData);
-    });
+          resolve(this.leLongParser.parse(Buffer.from(data)).number);
+        });
+      });
+      console.log(battResult);
+    }
 
-    console.log(battData);
+    return battPct;
   }
 
   // Give our device's model.
@@ -206,13 +215,9 @@ export class CT007Poller {
     this.setDetectorState('subscribingToCounts');
     this.battCharacteristic = characteristics[1];
 
-    // Grab battery level.
-    this.getBatteryLevel();
-
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
-      const radCtParser = new Parser().endianess('little').int32le('count');
-      const counts = radCtParser.parse(Buffer.from(data)).count;
+      const counts = this.leLongParser.parse(Buffer.from(data)).number;
       this.radCountEvent.dispatch(counts);
     });
 

@@ -92,7 +92,7 @@ export class Ratemeter {
         }
 
         console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1));
-
+        // TODO: Remove this. It's just for testing the method's execution.
         this.counter.getBatteryLevel();
       }
     }
