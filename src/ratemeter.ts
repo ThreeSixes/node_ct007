@@ -26,8 +26,6 @@ export class Ratemeter {
     this.counter.onRadCount.subscribe(this.handleIncomingCounts);
   }
 
-
-
   // Display our readings.
   public async display() {
     setTimeout(this.onSecond, 1000);
@@ -62,7 +60,7 @@ export class Ratemeter {
   }
 
   // Once per second we want to handle data from our detector.
-  private onSecond = () => {
+  private onSecond = async () => {
     let bufferFull = false;
     let bufferStr = "-";
 

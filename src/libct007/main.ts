@@ -55,6 +55,8 @@ export class CT007Poller {
   private myName = "";
   private myAddress = "";
   private myModel = {"full": "unkown", "short": "unkown"};
+  private battCharacteristic: any;
+  private batteryPct: number = 0;
 
   constructor(private config: ICT007Config = defaultConfig) {
     // Make sure we format the address for noble: a 6-byte hex string.
@@ -64,12 +66,16 @@ export class CT007Poller {
   }
 
   // Expose the periphrial's properites.
-  public get name() {
+  public get getName() {
     return this.myName;
   }
 
-  public get address() {
+  public get getAddress() {
     return this.myAddress;
+  }
+
+  public get getState() {
+    return this.detectorState;
   }
 
   // Use this to expose the rad_count event.
@@ -139,6 +145,15 @@ export class CT007Poller {
     return this.detectorState;
   }
 
+  // TODO: Make this just. fucking. return. the. battery. level. as. a. fucking. number.
+  public async getBatteryLevel() {
+    this.battCharacteristic.read(function(error: Error, data: string) {
+      const battParser = new Parser().endianess('little').int32le('battPct');
+      // This won't work, but FFS get the value out of here. Fuck. I hate anoymous functions.
+      return battParser.parse(Buffer.from(data)).battPct;
+    });
+  }
+
   // Give our device's model.
   private async getModelFromInfo(info: string) {
     return
@@ -151,8 +166,8 @@ export class CT007Poller {
       this.setDetectorState('connected');
 
       // specify the services and characteristics to discover
-      const serviceUUIDs = [this.config.radCountServiceId];
-      const characteristicUUIDs = [this.config.radCountCharacteristicId];
+      const serviceUUIDs = [this.config.radCountServiceId, this.config.batteryServiceId];
+      const characteristicUUIDs = [this.config.radCountCharacteristicId, this.config.batteryServiceCharacteristicId];
 
       // Look for service and characteristic IDs we want.
       peripheral.discoverSomeServicesAndCharacteristics(
@@ -185,6 +200,10 @@ export class CT007Poller {
   private onServicesAndCharacteristicsDiscovered = (error: Error, services: any, characteristics: any) => {
     const radCtCharacteristic = characteristics[0];
     this.setDetectorState('subscribingToCounts');
+    this.battCharacteristic = characteristics[1];
+
+    // Grab battery level.
+    this.getBatteryLevel();
 
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {
