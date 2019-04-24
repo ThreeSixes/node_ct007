@@ -58,6 +58,7 @@ export class CT007Poller {
   private battCharacteristic: any;
   private batteryPct: number = 0;
   private leLongParser = new Parser().endianess('little').int32le('number');
+  private ready: boolean = false;
 
   constructor(private config: ICT007Config = defaultConfig) {
     // Make sure we format the address for noble: a 6-byte hex string.
@@ -146,24 +147,24 @@ export class CT007Poller {
     return this.detectorState;
   }
 
+  // Get the device's battery level as a percentage.
   public async getBatteryLevel() {
     let battPct: number = -1;
     // Make sure we're connected otherwise the promise may never resolve.
     // TODO: Figure out why logic evaluating the detector's state never evaluates true.
-    if (true) {
-      // TODO: Figure out how to type this return which should be a number.
-      let battResult = await new Promise((resolve, reject) => {
+    if (this.ready) {
+      battPct = await new Promise<number>((resolve, reject) => {
         this.battCharacteristic.read((error: Error, data: string) => {
           if (error) {
             reject(error);
           }
-
           resolve(this.leLongParser.parse(Buffer.from(data)).number);
         });
       });
-      console.log(battResult);
     }
 
+    // TODO: Figure out what I can get a useful value here, but not when calling the fucntion.
+    console.log(battPct);
     return battPct;
   }
 
@@ -196,6 +197,7 @@ export class CT007Poller {
       this.setDetectorState('disconnected');
       this.myModel = {"full": "unkown", "short": "unkown"};
       this.myName = "";
+      this.ready = false;
 
       // If we want to reconnected when the detector shows back up...
       if (this.config.scanForever) {
@@ -214,6 +216,7 @@ export class CT007Poller {
     const radCtCharacteristic = characteristics[0];
     this.setDetectorState('subscribingToCounts');
     this.battCharacteristic = characteristics[1];
+    this.ready = true;
 
     // Handle incoming data from Rad_Count.
     radCtCharacteristic.on('data', (data: any, isNotification: boolean) => {

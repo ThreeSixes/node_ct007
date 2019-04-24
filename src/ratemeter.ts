@@ -45,6 +45,11 @@ export class Ratemeter {
   // Callback for incoming counts.
   private handleStateChange = (state: string) => {
     console.log("Device state: " + state);
+    if (state === "readingCounts") {
+      // TODO: Figure out why I have an unresolved promise instad of a useful value.
+      console.log("Battery: " + this.counter.getBatteryLevel() + "%");
+    }
+
     this.counterState = state;
   }
 
@@ -92,8 +97,6 @@ export class Ratemeter {
         }
 
         console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1));
-        // TODO: Remove this. It's just for testing the method's execution.
-        this.counter.getBatteryLevel();
       }
     }
     setTimeout(this.onSecond, 1000);
