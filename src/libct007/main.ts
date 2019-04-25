@@ -13,16 +13,6 @@ const btleServiceIds = {
   radCountServiceId: 'f100ffd004514100b100000000000000',
 };
 
-export interface IDeviceInfo {
-  batteryPercent?: number;
-  deviceName?: string;
-  firmwareRevision?: string;
-  hardwareRevision?: string;
-  maunfacturerName?: string;
-  modelNumber?: string;
-  serialNumber?: string;
-}
-
 export interface ICT007Config {
   address?: string | null;
   batteryServiceCharacteristicId: string;
@@ -47,9 +37,31 @@ export const defaultConfig: ICT007Config = {
   scanForever: true,
 };
 
+
+export interface IDeviceInfo {
+  batteryPercent?: number;
+  deviceName?: string;
+  firmwareRevision?: string;
+  hardwareRevision?: string;
+  maunfacturerName?: string;
+  modelNumber?: string;
+  serialNumber?: string;
+};
+
+export interface IDeviceMake {
+  full: string | null;
+  short: string | null;
+};
+
+interface IDoseConversionFactors {
+  F: number;
+  N: number;
+  [key: string]: number;
+};
+
 // Export constants that might be useful for applications.
 export const RadCountUpdateHz = 5;
-export const DefaultDoseConversionFactors = {
+export const DefaultDoseConversionFactors: IDoseConversionFactors = {
   F: 163,
   N: 1111,
 };
@@ -65,7 +77,7 @@ export class CT007Poller {
   private detectorState = 'init';
   private myName = "";
   private myAddress = "";
-  private myModel = {"full": "unkown", "short": "unkown"};
+  private myModel: IDeviceMake = {"full": null, "short": null};
   private battCharacteristic: any;
   private leLongParser = new Parser().endianess('little').int32le('number');
   private ready: boolean = false;
@@ -78,16 +90,32 @@ export class CT007Poller {
   }
 
   // Expose the periphrial's properites.
-  public get getName() {
+  public get name() {
     return this.myName;
   }
 
-  public get getAddress() {
+  public get address() {
     return this.myAddress;
   }
 
-  public get getState() {
+  public get state() {
     return this.detectorState;
+  }
+
+  public get model() {
+    return this.myModel;
+  }
+
+  public get doseConversionFactor(): number | null {
+    let doseRateConversionFactor: number | null = null;
+
+    if(this.myModel.short) {
+      if(this.myModel.short in DefaultDoseConversionFactors) {
+        doseRateConversionFactor = DefaultDoseConversionFactors[this.myModel.short];
+      }
+    }
+
+    return doseRateConversionFactor;
   }
 
   // Use this to expose the rad_count event.
@@ -184,6 +212,12 @@ export class CT007Poller {
       const serviceUUIDs = [this.config.radCountServiceId, this.config.batteryServiceId];
       const characteristicUUIDs = [this.config.radCountCharacteristicId, this.config.batteryServiceCharacteristicId];
 
+      const myModelShort = this.getModelShortFromName();
+
+      if (myModelShort) {
+        this.myModel = {"full": "CT007-${myModelShort}", "short": myModelShort};
+      }
+
       // Look for service and characteristic IDs we want.
       peripheral.discoverSomeServicesAndCharacteristics(
         serviceUUIDs,
@@ -196,7 +230,7 @@ export class CT007Poller {
     peripheral.on('disconnect', () => {
       // Reset some of our basic device info.
       this.setDetectorState('disconnected');
-      this.myModel = {"full": "unkown", "short": "unkown"};
+      this.myModel = {"full": null, "short": null};
       this.myName = "";
       this.ready = false;
 
@@ -205,6 +239,20 @@ export class CT007Poller {
         this.scan();
       }
     });
+  }
+
+  // Figure out our model give the device's name.
+  private getModelShortFromName(): string | null {
+    let modelShort:string | null = null;
+    const modelRegex = /CT-([A-Z])-[0-9]+/;
+    const regexResult = this.myName.match(modelRegex);
+
+    // If we matched...
+    if (regexResult) {
+      modelShort = regexResult[1];
+    }
+
+    return modelShort;
   }
 
   private setDetectorState(state: string) {

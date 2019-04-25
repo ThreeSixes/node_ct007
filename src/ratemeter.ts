@@ -8,9 +8,11 @@ export class Ratemeter {
     slow: 22
   };
 
+  private computeDose: boolean = false;
   private counter: any;
   private counterState: string = "";
   private countsBuffer: number[] = [];
+  private lastBattPct: number = -1;
   private integrationRate: number = 0;
   private myConfig = ct007.defaultConfig;
 
@@ -22,14 +24,22 @@ export class Ratemeter {
     // Set up our detector.
     this.counter = new ct007.CT007Poller(this.myConfig);
     this.counter.init();
+
+    // Set up events.
     this.counter.onStateChange.subscribe(this.handleStateChange);
     this.counter.onRadCount.subscribe(this.handleIncomingCounts);
     this.counter.onDevInfo.subscribe(this.handleIncomingDevInfo);
   }
 
   // Display our readings.
-  public async display() {
+  public async start() {
     setTimeout(this.onSecond, 1000);
+    setTimeout(this.requestBatteryLevel, 10000);
+  }
+
+  // Do we compute the dose rate?
+  public setComputeDoseRate(enabled: boolean) {
+    this.computeDose = enabled;
   }
 
   public setIntegrationRate(rate: string) {
@@ -59,8 +69,12 @@ export class Ratemeter {
 
   // Callback for incoming device information.
   private handleIncomingDevInfo = (data: any) => {
+    // If our device information includes a battery level...
     if (data.batteryPercent) {
-      console.log("Battery: " + data.batteryPercent + "%");
+      if (this.lastBattPct !== data.batteryPercent) {
+        this.lastBattPct = data.batteryPercent;
+        console.log("Detector battery: " + data.batteryPercent + "%");
+      }
     }
   }
 
@@ -70,10 +84,29 @@ export class Ratemeter {
       return Math.round(value * multiplier) / multiplier;
   }
 
+  // Convert counts per minute to dose rate in uSv/hr
+  private getDoseRate(cpm: number): number | null {
+    /*
+    * null means a proper conversion failed to happen. This could be due to a conversion factor not
+    * being available for the current detector. Only the CT007-F and N detectors are supported and are
+    * gamma-only. The library's dose rates are calibrated against Cs137. The CT007-F alpha/beta shield
+    * should be closed when dose rate readings matter.
+    */
+    let doseRate: number | null = null;
+
+    if (this.counter.model.short && this.counter.doseConversionFactor) {
+      // Figure out the dose rate.
+      doseRate = cpm / this.counter.doseConversionFactor;
+    }
+
+    return doseRate;
+  }
+
   // Once per second we want to handle data from our detector.
   private onSecond = async () => {
     let bufferFull = false;
     let bufferStr = "-";
+    let doseStr = "";
 
     if (this.counter) {
       const expectedBufLen = this.integrationRate * ct007.RadCountUpdateHz;
@@ -102,15 +135,28 @@ export class Ratemeter {
           bufferStr = "*";
         }
 
-        console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1));
+        const computedDose = this.getDoseRate(cpm);
+
+        // If we were able to compute a dose...
+        if (computedDose !== null && this.computeDose) {
+          doseStr = ", " + this.round(computedDose, 2) + " uSv/hr";
+        }
+
+        console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1) + doseStr);
       }
     }
     setTimeout(this.onSecond, 1000);
+  }
+
+  // Request battery information from the detecor periodically.
+  private requestBatteryLevel = () => {
+    this.counter.getBatteryLevel();
+    setTimeout(this.requestBatteryLevel, 10000);
   }
 }
 
 // Use our newly-constructed reatemeter.
 const rm = new Ratemeter();
 rm.setIntegrationRate("fast");
-rm.display();
-
+rm.setComputeDoseRate(true);
+rm.start();
