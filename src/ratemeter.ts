@@ -59,8 +59,8 @@ export class Ratemeter {
 
   // Callback for incoming device information.
   private handleIncomingDevInfo = (data: any) => {
-    if (data.battery) {
-      console.log("Battery: " + data.battery);
+    if (data.batteryPercent) {
+      console.log("Battery: " + data.batteryPercent + "%");
     }
   }
 
