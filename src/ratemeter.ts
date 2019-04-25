@@ -71,7 +71,7 @@ export class Ratemeter {
   private handleIncomingDevInfo = (data: any) => {
     // If our device information includes a battery level...
     if (data.batteryPercent) {
-      if (this.lastBattPct !== data.batteryPercent) {
+      if (this.lastBattPct !== data.batteryPercent && data.batteryPercent > -1) {
         this.lastBattPct = data.batteryPercent;
         console.log("Detector battery: " + data.batteryPercent + "%");
       }
