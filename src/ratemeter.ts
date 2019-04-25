@@ -9,9 +9,9 @@ export class Ratemeter {
   };
 
   private computeDose: boolean = false;
-  private counter: any;
-  private counterState: string = "";
   private countsBuffer: number[] = [];
+  private detector: any;
+  private detectorState: string = "";
   private lastBattPct: number = -1;
   private integrationRate: number = 0;
   private myConfig = ct007.defaultConfig;
@@ -22,13 +22,13 @@ export class Ratemeter {
     this.setIntegrationRate("fast");
 
     // Set up our detector.
-    this.counter = new ct007.CT007Poller(this.myConfig);
-    this.counter.init();
+    this.detector = new ct007.CT007Poller(this.myConfig);
+    this.detector.init();
 
     // Set up events.
-    this.counter.onStateChange.subscribe(this.handleStateChange);
-    this.counter.onRadCount.subscribe(this.handleIncomingCounts);
-    this.counter.onDevInfo.subscribe(this.handleIncomingDevInfo);
+    this.detector.onStateChange.subscribe(this.handleStateChange);
+    this.detector.onRadCount.subscribe(this.handleIncomingCounts);
+    this.detector.onDevInfo.subscribe(this.handleIncomingDevInfo);
   }
 
   // Display our readings.
@@ -55,10 +55,10 @@ export class Ratemeter {
 
   // Callback for incoming counts.
   private handleStateChange = (state: string) => {
-    this.counterState = state;
-    console.log("Device state: " + state);
+    this.detectorState = state;
+    console.log("Detector state: " + state);
     if (state === "readingCounts") {
-      this.counter.getBatteryLevel();
+      this.detector.getBatteryLevel();
     }
   }
 
@@ -94,9 +94,9 @@ export class Ratemeter {
     */
     let doseRate: number | null = null;
 
-    if (this.counter.model.short && this.counter.doseConversionFactor) {
+    if (this.detector.model.short && this.detector.doseConversionFactor) {
       // Figure out the dose rate.
-      doseRate = cpm / this.counter.doseConversionFactor;
+      doseRate = cpm / this.detector.doseConversionFactor;
     }
 
     return doseRate;
@@ -108,11 +108,11 @@ export class Ratemeter {
     let bufferStr = "-";
     let doseStr = "";
 
-    if (this.counter) {
+    if (this.detector) {
       const expectedBufLen = this.integrationRate * ct007.RadCountUpdateHz;
 
       // If we're taking readings...
-      if (this.counterState === "readingCounts") {
+      if (this.detectorState === "readingCounts") {
         let cpm = 0;
 
         if (this.countsBuffer.length >= expectedBufLen - 1) {
@@ -150,7 +150,7 @@ export class Ratemeter {
 
   // Request battery information from the detecor periodically.
   private requestBatteryLevel = () => {
-    this.counter.getBatteryLevel();
+    this.detector.getBatteryLevel();
     setTimeout(this.requestBatteryLevel, 10000);
   }
 }
