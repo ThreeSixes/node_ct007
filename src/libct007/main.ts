@@ -14,7 +14,13 @@ const btleServiceIds = {
 };
 
 export interface IDeviceInfo {
-  battery?: number;
+  batteryPercent?: number;
+  deviceName?: string;
+  firmwareRevision?: string;
+  hardwareRevision?: string;
+  maunfacturerName?: string;
+  modelNumber?: string;
+  serialNumber?: string;
 }
 
 export interface ICT007Config {
@@ -161,10 +167,10 @@ export class CT007Poller {
     // Make sure we're in a state to communicate with the detector otherwise the promise may never resolve.
     if (this.ready) {
       this.battCharacteristic.read((error: Error, data: string) => {
-        this.devInfoEvent.dispatch({battery: this.leLongParser.parse(Buffer.from(data)).number});
+        this.devInfoEvent.dispatch({batteryPercent: this.leLongParser.parse(Buffer.from(data)).number});
       });
     } else {
-        this.devInfoEvent.dispatch({battery: -1});
+      this.devInfoEvent.dispatch({batteryPercent: -1});
     }
   }
 
