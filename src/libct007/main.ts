@@ -13,6 +13,10 @@ const btleServiceIds = {
   radCountServiceId: 'f100ffd004514100b100000000000000',
 };
 
+export interface IDeviceInfo {
+  battery?: number;
+}
+
 export interface ICT007Config {
   address?: string | null;
   batteryServiceCharacteristicId: string;
@@ -48,6 +52,7 @@ export class CT007Poller {
   // Set up events.
   private radCountEvent = new SimpleEventDispatcher<number>();
   private stateChangeEvent = new SimpleEventDispatcher<string>();
+  private devInfoEvent = new SimpleEventDispatcher<IDeviceInfo>();
 
   // Private variables we want to use...
   private radCtParser = new Parser().endianess('little').int32le('count');
@@ -56,7 +61,6 @@ export class CT007Poller {
   private myAddress = "";
   private myModel = {"full": "unkown", "short": "unkown"};
   private battCharacteristic: any;
-  private batteryPct: number = 0;
   private leLongParser = new Parser().endianess('little').int32le('number');
   private ready: boolean = false;
 
@@ -88,6 +92,11 @@ export class CT007Poller {
   // Use this to expose device state change events.
   public get onStateChange() {
     return this.stateChangeEvent.asEvent();
+  }
+
+  // Use this to expose system info events.
+  public get onDevInfo() {
+    return this.devInfoEvent.asEvent();
   }
 
   // Class init.
@@ -148,29 +157,15 @@ export class CT007Poller {
   }
 
   // Get the device's battery level as a percentage.
-  public async getBatteryLevel() {
-    let battPct: number = -1;
-    // Make sure we're connected otherwise the promise may never resolve.
-    // TODO: Figure out why logic evaluating the detector's state never evaluates true.
+  public getBatteryLevel() {
+    // Make sure we're in a state to communicate with the detector otherwise the promise may never resolve.
     if (this.ready) {
-      battPct = await new Promise<number>((resolve, reject) => {
-        this.battCharacteristic.read((error: Error, data: string) => {
-          if (error) {
-            reject(error);
-          }
-          resolve(this.leLongParser.parse(Buffer.from(data)).number);
-        });
+      this.battCharacteristic.read((error: Error, data: string) => {
+        this.devInfoEvent.dispatch({battery: this.leLongParser.parse(Buffer.from(data)).number});
       });
+    } else {
+        this.devInfoEvent.dispatch({battery: -1});
     }
-
-    // TODO: Figure out what I can get a useful value here, but not when calling the fucntion.
-    console.log(battPct);
-    return battPct;
-  }
-
-  // Give our device's model.
-  private async getModelFromInfo(info: string) {
-    return
   }
 
   // Connect to our detector and set it up.

@@ -24,6 +24,7 @@ export class Ratemeter {
     this.counter.init();
     this.counter.onStateChange.subscribe(this.handleStateChange);
     this.counter.onRadCount.subscribe(this.handleIncomingCounts);
+    this.counter.onDevInfo.subscribe(this.handleIncomingDevInfo);
   }
 
   // Display our readings.
@@ -44,18 +45,23 @@ export class Ratemeter {
 
   // Callback for incoming counts.
   private handleStateChange = (state: string) => {
+    this.counterState = state;
     console.log("Device state: " + state);
     if (state === "readingCounts") {
-      // TODO: Figure out why I have an unresolved promise instad of a useful value.
-      console.log("Battery: " + this.counter.getBatteryLevel() + "%");
+      this.counter.getBatteryLevel();
     }
-
-    this.counterState = state;
   }
 
   // Callback for incoming counts.
   private handleIncomingCounts = (counts: number) => {
     this.countsBuffer.unshift(counts);
+  }
+
+  // Callback for incoming device information.
+  private handleIncomingDevInfo = (data: any) => {
+    if (data.battery) {
+      console.log("Battery: " + data.battery);
+    }
   }
 
   // Better rounding support.
