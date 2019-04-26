@@ -1,5 +1,11 @@
 // tslint:disable:no-console
-// This file is an example implementation of a rate meter that levergeas 
+/*
+ * By: ThreeSixes
+ * This file is part of the node-ct007 project. It is
+ * an exmaple implementation of a ratemeter. The is for
+ * reference only and comes with no warranty or guarantee
+ * about the accuracy of its readings.
+ */
 import * as ct007 from './libct007/main';
 
 export class Ratemeter {
@@ -42,7 +48,9 @@ export class Ratemeter {
     this.computeDose = enabled;
   }
 
+  // Set integration rate.
   public setIntegrationRate(rate: string) {
+    // There has to be a better way to do this.
     switch(rate) {
       case "fast":
       case "slow":
@@ -71,6 +79,7 @@ export class Ratemeter {
   private handleIncomingDevInfo = (data: any) => {
     // If our device information includes a battery level...
     if (data.batteryPercent) {
+      // If we have a new and valid reading to report report it.
       if (this.lastBattPct !== data.batteryPercent && data.batteryPercent > -1) {
         this.lastBattPct = data.batteryPercent;
         console.log("Detector battery: " + data.batteryPercent + "%");
@@ -108,10 +117,11 @@ export class Ratemeter {
     let bufferStr = "-";
     let doseStr = "";
 
+    // If we actually have our detector set up...
     if (this.detector) {
       const expectedBufLen = this.integrationRate * ct007.RadCountUpdateHz;
 
-      // If we're taking readings...
+      // If the detector is taking readings...
       if (this.detectorState === "readingCounts") {
         let cpm = 0;
 
@@ -122,6 +132,7 @@ export class Ratemeter {
           bufferFull = false;
         }
 
+        // Make sure we don't divide by zero.
         if (this.countsBuffer.length > 0) {
           const countsSum = this.countsBuffer.reduce((accum, cur) => accum + cur);
           const sumAvg = countsSum / this.countsBuffer.length;
@@ -135,27 +146,40 @@ export class Ratemeter {
           bufferStr = "*";
         }
 
+        // Get the dose rate.
         const computedDose = this.getDoseRate(cpm);
 
-        // If we were able to compute a dose...
+        // If we were configured and able to compute a dose...
         if (computedDose !== null && this.computeDose) {
           doseStr = ", " + this.round(computedDose, 2) + " uSv/hr";
         }
 
+        // Show the counts per minute and optionally the dose rate.
         console.log("[" + bufferStr + "] CPM: " + this.round(cpm, 1) + doseStr);
       }
     }
+
+    // Call this again in 1 second.
     setTimeout(this.onSecond, 1000);
   }
 
   // Request battery information from the detecor periodically.
   private requestBatteryLevel = () => {
+    // Ask the detector for its battery level. The response will be handled by handleIncomingDevInfo().
     this.detector.getBatteryLevel();
+
+    // Call this again in 10 seconds.
     setTimeout(this.requestBatteryLevel, 10000);
   }
 }
 
-// Use our newly-constructed reatemeter.
+/*
+ * This is where we actually start testing the ratemeter. This is set up to mimic controls on an actual ratemeter.
+ *
+ * This example sets the intgration rate to fast (4 seconds) and turns on dose rate calculation for the CT007-F and N.
+ * If we don't have a conversion factor for the detector it will not show up. The start() method starts the process
+ * of grabbing readings.
+ */
 const rm = new Ratemeter();
 rm.setIntegrationRate("fast");
 rm.setComputeDoseRate(true);
