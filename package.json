@@ -1,5 +1,5 @@
 {
-  "name": "CT007",
+  "name": "node-ct007",
   "version": "0.0.1",
   "description": "CT007 radiation detector library",
   "main": "dist/index.js",
