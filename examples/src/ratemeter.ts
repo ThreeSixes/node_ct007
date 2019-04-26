@@ -6,7 +6,7 @@
  * reference only and comes with no warranty or guarantee
  * about the accuracy of its readings.
  */
-import * as ct007 from '../dist/libct007/main.js';
+import * as ct007 from '../../dist/libct007/main.js';
 
 export class Ratemeter {
   private readonly integrationRateMap = {
