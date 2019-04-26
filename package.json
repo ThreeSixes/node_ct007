@@ -1,7 +1,7 @@
 {
   "name": "CT007",
   "version": "0.0.1",
-  "description": "CT007 radiation detector wrapper",
+  "description": "CT007 radiation detector library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
