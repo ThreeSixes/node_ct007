@@ -48,7 +48,7 @@ export interface IDeviceInfo {
   serialNumber?: string;
 };
 
-export interface IDeviceMake {
+export interface IDeviceModel {
   full: string | null;
   short: string | null;
 };
@@ -74,10 +74,10 @@ export class CT007Poller {
 
   // Private variables we want to use...
   private radCtParser = new Parser().endianess('little').int32le('count');
-  private detectorState = 'init';
-  private myName = "";
-  private myAddress = "";
-  private myModel: IDeviceMake = {"full": null, "short": null};
+  private detectorState: string = 'init';
+  private myName: string = "";
+  private myAddress: string = "";
+  private myModel: IDeviceModel = {"full": null, "short": null};
   private battCharacteristic: any;
   private leLongParser = new Parser().endianess('little').int32le('number');
   private ready: boolean = false;
@@ -90,19 +90,19 @@ export class CT007Poller {
   }
 
   // Expose the periphrial's properites.
-  public get name() {
+  public get name(): string {
     return this.myName;
   }
 
-  public get address() {
+  public get address(): string {
     return this.myAddress;
   }
 
-  public get state() {
+  public get state(): string {
     return this.detectorState;
   }
 
-  public get model() {
+  public get model(): IDeviceModel {
     return this.myModel;
   }
 
