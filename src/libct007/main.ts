@@ -64,6 +64,8 @@ export const RadCountUpdateHz = 5;
 export const DefaultDoseConversionFactors: IDoseConversionFactors = {
   F: 163,
   N: 1111,
+  M: 33000,
+  P: 348
 };
 
 export class CT007Poller {

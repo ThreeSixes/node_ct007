@@ -97,9 +97,8 @@ export class Ratemeter {
   private getDoseRate(cpm: number): number | null {
     /*
     * null means a proper conversion failed to happen. This could be due to a conversion factor not
-    * being available for the current detector. Only the CT007-F and N detectors are supported and are
-    * gamma-only. The library's dose rates are calibrated against Cs137. The CT007-F alpha/beta shield
-    * should be closed when dose rate readings matter.
+    * being available for the current detector. The CT007-F and P should have a closed alpha/beta
+    * shield closed when gathering dose rate data as doeses are calibrated with gamma only.
     */
     let doseRate: number | null = null;
 
@@ -176,7 +175,7 @@ export class Ratemeter {
 /*
  * This is where we actually start testing the ratemeter. This is set up to mimic controls on an actual ratemeter.
  *
- * This example sets the intgration rate to fast (4 seconds) and turns on dose rate calculation for the CT007-F and N.
+ * This example sets the intgration rate to fast (4 seconds) and turns on dose rate calculation for the CT007-F, N, M and P.
  * If we don't have a conversion factor for the detector it will not show up. The start() method starts the process
  * of grabbing readings.
  */
