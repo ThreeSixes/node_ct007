@@ -56,6 +56,8 @@ export interface IDeviceModel {
 interface IDoseConversionFactors {
   F: number;
   N: number;
+  M: number;
+  P: number;
   [key: string]: number;
 };
 
