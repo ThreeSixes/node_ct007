@@ -65,7 +65,7 @@ export class Ratemeter {
   private handleStateChange = (state: string) => {
     this.detectorState = state;
     console.log("Detector state: " + state);
-    if (state === "readingCounts") {
+    if (state === "reading") {
       this.detector.getBatteryLevel();
     }
   }
@@ -121,7 +121,7 @@ export class Ratemeter {
       const expectedBufLen = this.integrationRate * ct007.RadCountUpdateHz;
 
       // If the detector is taking readings...
-      if (this.detectorState === "readingCounts") {
+      if (this.detectorState === "reading") {
         let cpm = 0;
 
         if (this.countsBuffer.length >= expectedBufLen - 1) {
