@@ -1,8 +1,8 @@
 // tslint:disable:no-console
 import { Parser } from 'binary-parser';
-import * as noble from 'noble';
 // @ts-ignore
 import * as StateMachine from 'javascript-state-machine';
+import * as noble from 'noble';
 import { SimpleEventDispatcher } from "strongly-typed-events";
 
 // We use these to track which services and chracteristics we're interested in using.
@@ -67,8 +67,8 @@ interface IDoseConversionFactors {
 export const RadCountUpdateHz = 5;
 export const DefaultDoseConversionFactors: IDoseConversionFactors = {
   F: 163,
-  N: 1111,
   M: 33000,
+  N: 1111,
   P: 348
 };
 
@@ -268,6 +268,7 @@ export class CT007Poller {
     return modelShort;
   }
 
+  // Disconnect the device.
   private disconnectPeripheral() {
     // Reset device properties and ready flag.
     this.myModel = {"full": null, "short": null};
@@ -284,11 +285,13 @@ export class CT007Poller {
 
   }
 
+  // Send the detector's state to the client consuming the library.
   private setDetectorState(state: string) {
     // Set our global tracker. Maybe we don't need this.
     this.stateChangeEvent.dispatch(state);
   }
 
+  // Handle discovery o services, etc.
   private onServicesAndCharacteristicsDiscovered = (error: Error, services: any, characteristics: any) => {
     const radCtCharacteristic = characteristics[0];
     this.battCharacteristic = characteristics[1];
