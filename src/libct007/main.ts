@@ -9,8 +9,8 @@ import { SimpleEventDispatcher } from "strongly-typed-events";
 const btleServiceIds = {
   batteryCharacteristicId: '00002a1900001000800000805f9b34fb',
   batteryServiceId: '0000180f00001000800000805f9b34fb',
-  informationCharacteristicId: '',
-  informationServiceId: '',
+  informationCharacteristicId: '00002a2300001000800000805f9b34fb',
+  informationServiceId: '0000180a00001000800000805f9b34fb',
   radCountCharacteristicId: 'f100ffd104514100b100000000000000',
   radCountServiceId: 'f100ffd004514100b100000000000000',
 };
@@ -174,7 +174,6 @@ export class CT007Poller {
     // When we've discovered a device...
     noble.on('discover', peripheral => {
       let connectToPeriphrial = false;
-
       // If we're searching for both a name and address...
       if (this.config.name && this.config.address) {
         connectToPeriphrial = (peripheral.id === this.config.address) &&
